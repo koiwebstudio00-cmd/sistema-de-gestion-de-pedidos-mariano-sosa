@@ -58,7 +58,7 @@ import { MOCK_ORDERS, MOCK_CHATS, MOCK_LOCATIONS, MOCK_PRODUCTS, MOCK_CUSTOMERS,
 
 // --- Utility Components (shadcn-like) ---
 
-const Card = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
+const Card = ({ children, className = "" }: { children: React.ReactNode, className?: string, key?: React.Key }) => (
   <div className={`bg-white border border-slate-200 rounded-xl shadow-sm ${className}`}>
     {children}
   </div>
@@ -122,17 +122,17 @@ const Dialog = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose
 const DashboardModule = () => {
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500">Bienvenido de nuevo, Mariano.</p>
         </div>
-        <div className="flex gap-3">
-          <select className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
+        <div className="flex gap-2">
+          <select className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
             <option>Todos los locales</option>
             {MOCK_LOCATIONS.map(l => <option key={l.id}>{l.name}</option>)}
           </select>
-          <select className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
+          <select className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
             <option>Todos los canales</option>
             <option>WhatsApp</option>
             <option>Instagram</option>
@@ -254,13 +254,29 @@ const DashboardModule = () => {
 
 const ConversationsModule = () => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(MOCK_CHATS[0]);
+  const [view, setView] = useState<'list' | 'chat' | 'info'>('list');
+
+  useEffect(() => {
+    if (selectedChat && view === 'list') {
+      // In mobile, we might want to stay in list until clicked, but for desktop we need it selected
+    }
+  }, [selectedChat]);
+
+  const handleSelectChat = (chat: Chat) => {
+    setSelectedChat(chat);
+    setView('chat');
+  };
 
   return (
-    <div className="h-[calc(100vh-120px)] flex gap-4 animate-fade-in">
+    <div className="h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] flex gap-4 animate-fade-in relative overflow-hidden">
       {/* Chats List */}
-      <Card className="w-80 flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-slate-100">
-          <div className="relative">
+      <Card className={`
+        w-full md:w-80 flex flex-col overflow-hidden transition-all duration-300
+        ${view === 'list' ? 'flex' : 'hidden md:flex'}
+      `}>
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-slate-900 md:hidden">Conversaciones</h3>
+          <div className="relative flex-1 md:w-full">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
               type="text" 
@@ -273,7 +289,7 @@ const ConversationsModule = () => {
           {MOCK_CHATS.map((chat) => (
             <div 
               key={chat.id}
-              onClick={() => setSelectedChat(chat)}
+              onClick={() => handleSelectChat(chat)}
               className={`p-4 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${selectedChat?.id === chat.id ? 'bg-coffee-primary/5 border-l-4 border-l-coffee-primary' : ''}`}
             >
               <div className="flex justify-between items-start mb-1">
@@ -293,32 +309,44 @@ const ConversationsModule = () => {
       </Card>
 
       {/* Active Chat */}
-      <Card className="flex-1 flex flex-col overflow-hidden">
+      <Card className={`
+        flex-1 flex flex-col overflow-hidden transition-all duration-300
+        ${view === 'chat' ? 'flex' : 'hidden md:flex'}
+      `}>
         {selectedChat ? (
           <>
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-coffee-secondary/20 flex items-center justify-center text-coffee-primary font-bold">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
+                <button 
+                  onClick={() => setView('list')}
+                  className="md:hidden p-1 -ml-1 text-slate-400 hover:text-slate-600"
+                >
+                  <ChevronRight className="w-5 h-5 rotate-180" />
+                </button>
+                <div 
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-coffee-secondary/20 flex items-center justify-center text-coffee-primary font-bold shrink-0 text-sm md:text-base cursor-pointer"
+                  onClick={() => setView('info')}
+                >
                   {selectedChat.customerName.charAt(0)}
                 </div>
-                <div>
-                  <h4 className="font-semibold text-sm">{selectedChat.customerName}</h4>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <div onClick={() => setView('info')} className="cursor-pointer overflow-hidden">
+                  <h4 className="font-semibold text-sm truncate">{selectedChat.customerName}</h4>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                     <span className="text-[10px] text-slate-400">En línea</span>
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="p-2 h-9 w-9"><Phone className="w-4 h-4" /></Button>
-                <Button variant="outline" className="p-2 h-9 w-9"><MoreVertical className="w-4 h-4" /></Button>
+              <div className="flex gap-1 shrink-0">
+                <Button variant="ghost" className="p-2 h-8 w-8 md:h-9 md:w-9" onClick={() => setView('info')}><Users className="w-4 h-4 md:hidden" /><Phone className="w-4 h-4 hidden md:block" /></Button>
+                <Button variant="ghost" className="p-2 h-8 w-8 md:h-9 md:w-9"><MoreVertical className="w-4 h-4" /></Button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-slate-50/50">
               {selectedChat.messages.length > 0 ? (
                 selectedChat.messages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] p-3 rounded-2xl text-sm ${
+                    <div className={`max-w-[85%] md:max-w-[70%] p-3 rounded-2xl text-sm ${
                       msg.sender === 'user' 
                         ? 'bg-coffee-primary text-white rounded-tr-none' 
                         : 'bg-white border border-slate-100 text-slate-800 rounded-tl-none shadow-sm'
@@ -333,19 +361,19 @@ const ConversationsModule = () => {
                 </div>
               )}
             </div>
-            <div className="p-4 border-t border-slate-100">
+            <div className="p-3 md:p-4 border-t border-slate-100 bg-white">
               <div className="flex gap-2">
                 <input 
                   type="text" 
                   placeholder="Escribe un mensaje..." 
                   className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-lg text-sm outline-none focus:border-coffee-primary"
                 />
-                <Button className="h-10 w-10 p-0"><Send className="w-4 h-4" /></Button>
+                <Button className="h-10 w-10 p-0 shrink-0"><Send className="w-4 h-4" /></Button>
               </div>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8 text-center">
             <MessageSquare className="w-12 h-12 mb-4 opacity-20" />
             <p>Selecciona una conversación para comenzar</p>
           </div>
@@ -354,7 +382,19 @@ const ConversationsModule = () => {
 
       {/* Customer Info */}
       {selectedChat && (
-        <Card className="w-72 p-6 flex flex-col gap-6 overflow-y-auto">
+        <Card className={`
+          w-full md:w-72 p-6 flex flex-col gap-6 overflow-y-auto transition-all duration-300
+          ${view === 'info' ? 'flex' : 'hidden lg:flex'}
+        `}>
+          <div className="flex justify-between items-center lg:hidden -mb-4">
+            <button 
+              onClick={() => setView('chat')}
+              className="p-1 -ml-1 text-slate-400 hover:text-slate-600 flex items-center gap-1 text-sm font-medium"
+            >
+              <ChevronRight className="w-4 h-4 rotate-180" /> Volver al chat
+            </button>
+          </div>
+
           <div className="text-center">
             <div className="w-20 h-20 rounded-full bg-coffee-secondary/10 flex items-center justify-center text-coffee-primary text-2xl font-bold mx-auto mb-4">
               {selectedChat.customerName.charAt(0)}
@@ -389,8 +429,9 @@ const ConversationsModule = () => {
             </div>
           </div>
 
-          <div className="mt-auto">
+          <div className="mt-auto space-y-2">
             <Button variant="outline" className="w-full">Ver historial completo</Button>
+            <Button variant="ghost" className="w-full text-rose-600 hover:bg-rose-50 md:hidden" onClick={() => setView('chat')}>Cerrar detalles</Button>
           </div>
         </Card>
       )}
@@ -514,16 +555,16 @@ const KanbanModule = () => {
 
   return (
     <div className="h-[calc(100vh-120px)] flex flex-col gap-4 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Pedidos (Kanban)</h1>
-        <Button><Plus className="w-4 h-4" /> Nuevo pedido</Button>
+        <Button className="w-full sm:w-auto"><Plus className="w-4 h-4" /> Nuevo pedido</Button>
       </div>
 
-      <div className="flex-1 overflow-hidden pb-2">
-        <div className="flex gap-2 h-full w-full">
+      <div className="flex-1 overflow-x-auto pb-4 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
+        <div className="flex gap-3 h-full min-w-max md:min-w-0">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
             {columns.map(col => (
-              <div key={col} className="flex-1 flex flex-col h-full min-w-0">
+              <div key={col} className="w-[280px] md:flex-1 flex flex-col h-full min-w-0">
                 <DroppableColumn id={col} title={col} count={orders.filter(o => o.status === col).length}>
                   <SortableContext items={orders.filter(o => o.status === col).map(o => o.id)} strategy={verticalListSortingStrategy}>
                     {orders.filter(o => o.status === col).map(order => (
@@ -606,9 +647,9 @@ const KanbanModule = () => {
 const LocationsModule = () => {
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Locales</h1>
-        <Button><Plus className="w-4 h-4" /> Agregar local</Button>
+        <Button className="w-full sm:w-auto"><Plus className="w-4 h-4" /> Agregar local</Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -661,9 +702,9 @@ const ProductsModule = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Productos</h1>
-        <Button><Plus className="w-4 h-4" /> Agregar producto</Button>
+        <Button className="w-full sm:w-auto"><Plus className="w-4 h-4" /> Agregar producto</Button>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2">
@@ -682,7 +723,39 @@ const ProductsModule = () => {
         ))}
       </div>
 
-      <Card className="overflow-hidden">
+      <div className="md:hidden space-y-4">
+        {filteredProducts.map(prod => (
+          <Card key={prod.id} className="p-4">
+            <div className="flex gap-4">
+              <div className="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center text-3xl shrink-0">
+                {prod.image}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="font-bold text-slate-900 truncate">{prod.name}</h3>
+                  <button className="text-slate-400"><MoreVertical className="w-4 h-4" /></button>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <Badge variant="default">{prod.category}</Badge>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full ${prod.available ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                    <span className="text-[10px] text-slate-500 font-medium">{prod.available ? 'Disponible' : 'Sin stock'}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-bold text-coffee-primary">${prod.price}</span>
+                  <Button variant="outline" className="py-1 px-3 text-xs h-8">Editar</Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+        {filteredProducts.length === 0 && (
+          <div className="text-center py-12 text-slate-400 italic">No se encontraron productos.</div>
+        )}
+      </div>
+
+      <Card className="hidden md:block overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100">
@@ -733,22 +806,55 @@ const ProductsModule = () => {
 const CustomersModule = () => {
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Clientes</h1>
-        <div className="flex gap-3">
-          <div className="relative">
+        <div className="flex gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
               type="text" 
               placeholder="Buscar clientes..." 
-              className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-coffee-primary"
+              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-coffee-primary"
             />
           </div>
-          <Button variant="outline"><Filter className="w-4 h-4" /> Filtros</Button>
+          <Button variant="outline" className="px-3"><Filter className="w-4 h-4" /></Button>
         </div>
       </div>
 
-      <Card className="overflow-hidden">
+      <div className="md:hidden space-y-4">
+        {MOCK_CUSTOMERS.map(cust => (
+          <Card key={cust.id} className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-coffee-secondary/20 flex items-center justify-center text-coffee-primary font-bold">
+                  {cust.name.charAt(0)}
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900">{cust.name}</h4>
+                  <div className="flex items-center gap-2">
+                    {cust.channel === 'WhatsApp' ? <Phone className="w-3 h-3 text-emerald-600" /> : cust.channel === 'Instagram' ? <Instagram className="w-3 h-3 text-pink-600" /> : <Globe className="w-3 h-3 text-blue-600" />}
+                    <span className="text-[10px] text-slate-500 uppercase font-bold">{cust.channel}</span>
+                  </div>
+                </div>
+              </div>
+              <Button variant="ghost" className="p-1 h-8 w-8"><ChevronRight className="w-4 h-4" /></Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-1">
+              <div className="bg-slate-50 rounded-lg p-2">
+                <p className="text-[10px] text-slate-400 uppercase font-bold">Pedidos</p>
+                <p className="font-bold">{cust.ordersCount}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-2">
+                <p className="text-[10px] text-slate-400 uppercase font-bold">Invertido</p>
+                <p className="font-bold">${cust.totalSpent.toLocaleString()}</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-400 text-right mt-2">Último pedido: {cust.lastOrder}</p>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="hidden md:block overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100">
@@ -807,6 +913,7 @@ export default function App() {
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
   const [activeConversations, setActiveConversations] = useState(12);
   const [unreadCount, setUnreadCount] = useState(3);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Real-time simulations
   useEffect(() => {
@@ -855,21 +962,41 @@ export default function App() {
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Toaster position="top-right" richColors />
       
+      {/* Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col z-20">
-        <div className="p-6 flex items-center gap-3">
-          <img src="https://i.postimg.cc/3wvQTVXQ/Captura-de-pantalla-2026-03-19-a-la-s-7-05-57-p-m-removebg-preview.png" alt="Logo" className="h-10" referrerPolicy="no-referrer" />
-          <div className="overflow-hidden">
-            <h1 className="font-bold text-xs leading-tight text-coffee-dark uppercase tracking-tighter">Mariano Sosa</h1>
-            <p className="text-[10px] text-slate-400 font-medium">Cake Shop</p>
+      <aside className={`
+        fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex flex-col z-40 transition-transform duration-300 transform 
+        lg:translate-x-0 lg:static lg:inset-auto
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="https://i.postimg.cc/3wvQTVXQ/Captura-de-pantalla-2026-03-19-a-la-s-7-05-57-p-m-removebg-preview.png" alt="Logo" className="h-10" referrerPolicy="no-referrer" />
+            <div className="overflow-hidden">
+              <h1 className="font-bold text-xs leading-tight text-coffee-dark uppercase tracking-tighter">Mariano Sosa</h1>
+              <p className="text-[10px] text-slate-400 font-medium">Cake Shop</p>
+            </div>
           </div>
+          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-600">
+            <XCircle className="w-6 h-6" />
+          </button>
         </div>
 
         <nav className="flex-1 px-4 py-4 space-y-1">
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveModule(item.id as Module)}
+              onClick={() => {
+                setActiveModule(item.id as Module);
+                setIsSidebarOpen(false);
+              }}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${
                 activeModule === item.id 
                   ? 'bg-coffee-primary text-white shadow-md shadow-coffee-primary/20' 
@@ -905,9 +1032,14 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
-        <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-10">
+        <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-8 flex items-center justify-between z-10 shrink-0">
           <div className="flex items-center gap-4">
-            <button className="lg:hidden text-slate-500"><Menu className="w-6 h-6" /></button>
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-50 rounded-lg"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
             <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 font-medium">
               <span>Plataforma</span>
               <ChevronRight className="w-3 h-3" />
@@ -931,8 +1063,8 @@ export default function App() {
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className="max-w-7xl mx-auto">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50">
+          <div className="max-w-7xl mx-auto pb-12">
             {renderModule()}
           </div>
         </div>
